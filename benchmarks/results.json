@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "timestamp": "2026-06-15T16:20:21.406526+00:00",
+    "iterations": 200,
+    "model": "gemma3:4b",
+    "redis": {
+      "host": "localhost",
+      "port": 6379
+    },
+    "mongo": {
+      "uri_set": true,
+      "db": "chatbot",
+      "collection": "history"
+    }
+  },
+  "redis": {
+    "get": {
+      "p50": 0.7811,
+      "p95": 0.9358,
+      "p99": 1.0739,
+      "mean": 0.8054,
+      "stddev": 0.0819,
+      "ops_per_sec": 1241.6
+    },
+    "save": {
+      "p50": 0.8031,
+      "p95": 0.987,
+      "p99": 1.0884,
+      "mean": 0.821,
+      "stddev": 0.0924,
+      "ops_per_sec": 1218.0
+    },
+    "clear": {
+      "p50": 0.7967,
+      "p95": 0.953,
+      "p99": 1.2865,
+      "mean": 0.8098,
+      "stddev": 0.1017,
+      "ops_per_sec": 1234.9
+    },
+    "calls_per_chat_turn": 2
+  },
+  "mongo": {
+    "get": {
+      "p50": 0.8145,
+      "p95": 1.0197,
+      "p99": 1.1023,
+      "mean": 0.8393,
+      "stddev": 0.1373,
+      "ops_per_sec": 1191.4
+    },
+    "save": {
+      "p50": 0.8282,
+      "p95": 1.0392,
+      "p99": 1.1154,
+      "mean": 0.8438,
+      "stddev": 0.092,
+      "ops_per_sec": 1185.1
+    },
+    "clear": {
+      "p50": 0.7912,
+      "p95": 0.9711,
+      "p99": 1.1758,
+      "mean": 0.8186,
+      "stddev": 0.1275,
+      "ops_per_sec": 1221.5
+    },
+    "calls_per_chat_turn": 2
+  }
+}

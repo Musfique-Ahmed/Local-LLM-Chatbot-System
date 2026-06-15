@@ -1,0 +1,4 @@
+redis>=5.0
+requests>=2.31
+pymongo>=4.6
+dnspython>=2.4

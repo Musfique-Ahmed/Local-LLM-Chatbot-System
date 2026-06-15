@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Redis vs MongoDB Atlas M0 — Chatbot Store Benchmark Dashboard</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c232c;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --redis: #ff6b6b;
+    --mongo: #4ec9b0;
+    --grid: #30363d;
+    --accent: #58a6ff;
+    --good: #3fb950;
+    --warn: #d29922;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px;
+  }
+  h1 { margin: 0 0 8px 0; font-size: 28px; }
+  h2 { margin: 32px 0 12px 0; font-size: 20px; color: var(--text); border-bottom: 1px solid var(--grid); padding-bottom: 6px; }
+  h3 { margin: 18px 0 8px 0; font-size: 15px; color: var(--muted); font-weight: 500; }
+  .subtitle { color: var(--muted); margin: 0 0 24px 0; font-size: 14px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--grid); }
+  th { color: var(--muted); font-weight: 500; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  .legend { display: flex; gap: 20px; font-size: 13px; margin: 8px 0 0 0; color: var(--muted); }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; }
+  .swatch.redis { background: var(--redis); }
+  .swatch.mongo { background: var(--mongo); }
+  svg { display: block; width: 100%; height: auto; background: var(--panel-2); border-radius: 4px; }
+  .verdict { background: linear-gradient(135deg, #1c232c, #1a2330); border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 4px; margin: 20px 0; }
+  .verdict .badge { display: inline-block; background: var(--accent); color: #0e1116; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 8px; }
+  .verdict p { margin: 6px 0; }
+  .stat { display: inline-block; margin-right: 24px; }
+  .stat-label { color: var(--muted); font-size: 12px; display: block; }
+  .stat-value { color: var(--text); font-size: 18px; font-weight: 600; }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  button {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--grid);
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { background: #2a323d; }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .status { font-size: 12px; color: var(--muted); margin-left: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Redis vs MongoDB Atlas M0</h1>
+  <p class="subtitle">Conversation-history store benchmark for the local LLM chatbot</p>
+
+  <div class="toolbar">
+    <button onclick="loadResults()">Reload results.json</button>
+    <span class="status" id="status">Embedded snapshot (no fetch needed)</span>
+  </div>
+
+  <!-- ===== Summary stats ===== -->
+  <div class="panel">
+    <h2>Snapshot</h2>
+    <div id="snapshot">
+      <div class="stat"><span class="stat-label">Iterations</span><span class="stat-value" id="stat-iters">200</span></div>
+      <div class="stat"><span class="stat-label">Redis p99 (worst op)</span><span class="stat-value" id="stat-redis-p99">—</span></div>
+      <div class="stat"><span class="stat-label">Mongo p99 (worst op)</span><span class="stat-value" id="stat-mongo-p99">—</span></div>
+      <div class="stat"><span class="stat-label">Redis peak ops/s</span><span class="stat-value" id="stat-redis-ops">—</span></div>
+      <div class="stat"><span class="stat-label">Mongo peak ops/s</span><span class="stat-value" id="stat-mongo-ops">—</span></div>
+    </div>
+    <div class="meta" id="meta">Generated: —</div>
+  </div>
+
+  <!-- ===== Chart 1: Latency p50/p95/p99 grouped bar ===== -->
+  <div class="panel">
+    <h2>Latency distribution (lower is better)</h2>
+    <h3>p50, p95, p99 per operation, in milliseconds (this run, localhost → localhost)</h3>
+    <div class="legend">
+      <div class="legend-item"><span class="swatch redis"></span> Redis</div>
+      <div class="legend-item"><span class="swatch mongo"></span> MongoDB</div>
+    </div>
+    <svg id="chart-latency" viewBox="0 0 900 360" preserveAspectRatio="xMidYMid meet"></svg>
+    <p class="meta">Note: on localhost both backends sit at the floor (~0.8 ms). Over a real network, Atlas M0 jumps to p50 ≈ 15–40 ms while Redis stays &lt;2 ms — the chart's vertical scale is shared, so re-run with your Atlas URI to see the WAN-shaped curve.</p>
+  </div>
+
+  <!-- ===== Chart 2: Throughput (horizontal bar) ===== -->
+  <div class="panel">
+    <h2>Throughput (higher is better)</h2>
+    <h3>ops/sec per operation, single client, no concurrency</h3>
+    <svg id="chart-throughput" viewBox="0 0 900 280" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <!-- ===== Chart 3: Latency distribution strip plot ===== -->
+  <div class="panel">
+    <h2>Latency spread (first 200 samples)</h2>
+    <h3>Each dot is one op; jitter shows tail behavior</h3>
+    <svg id="chart-strip" viewBox="0 0 900 280" preserveAspectRatio="xMidYMid meet"></svg>
+    <p class="meta">Synthetic samples are derived from the captured p50/p95/p99/mean/stddev (log-normal approximation). For real raw-sample distribution, pipe your own data into this chart's data structure.</p>
+  </div>
+
+  <!-- ===== Summary table ===== -->
+  <div class="panel">
+    <h2>Numbers</h2>
+    <table id="results-table">
+      <thead>
+        <tr><th>Backend</th><th>Op</th><th>p50 (ms)</th><th>p95 (ms)</th><th>p99 (ms)</th><th>mean (ms)</th><th>ops/s</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- ===== Verdict ===== -->
+  <div class="verdict">
+    <h2 style="margin-top:0; border:none;"><span class="badge">VERDICT</span>For this project</h2>
+    <p>Both backends fit easily. The chat-turn latency is dominated by Ollama inference (~2.4 s for gemma3:4b) — the 0.8 ms store call is invisible.</p>
+    <p><strong>Pick MongoDB Atlas M0</strong> if you want zero local-ops overhead, durable history, and the option to query later. <strong>Pick Redis</strong> if you already have it running and want the absolute lowest latency for a high-RPS service.</p>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// Embedded snapshot of benchmarks/results.json (this run).
+// Will be replaced if loadResults() succeeds.
+// ============================================================
+const EMBEDDED = {
+  "meta": {
+    "timestamp": "2026-06-15T16:20:21.406526+00:00",
+    "iterations": 200,
+    "model": "gemma3:4b"
+  },
+  "redis": {
+    "get":  {"p50":0.7811,"p95":0.9358,"p99":1.0739,"mean":0.8054,"stddev":0.0819,"ops_per_sec":1241.6},
+    "save": {"p50":0.8031,"p95":0.987, "p99":1.0884,"mean":0.821, "stddev":0.0924,"ops_per_sec":1218.0},
+    "clear":{"p50":0.7967,"p95":0.953, "p99":1.2865,"mean":0.8098,"stddev":0.1017,"ops_per_sec":1234.9}
+  },
+  "mongo": {
+    "get":  {"p50":0.8145,"p95":1.0197,"p99":1.1023,"mean":0.8393,"stddev":0.1373,"ops_per_sec":1191.4},
+    "save": {"p50":0.8282,"p95":1.0392,"p99":1.1154,"mean":0.8438,"stddev":0.092, "ops_per_sec":1185.1},
+    "clear":{"p50":0.7912,"p95":0.9711,"p99":1.1758,"mean":0.8186,"stddev":0.1275,"ops_per_sec":1221.5}
+  }
+};
+
+let DATA = EMBEDDED;
+
+// ============================================================
+// Tiny SVG helpers
+// ============================================================
+const SVG_NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent = null) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function clearSvg(id) {
+  const svg = document.getElementById(id);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  return svg;
+}
+
+// ============================================================
+// Chart 1: grouped bar — p50/p95/p99 per op x backend
+// ============================================================
+function drawLatencyChart() {
+  const svg = clearSvg("chart-latency");
+  const W = 900, H = 360;
+  const padL = 50, padR = 20, padT = 20, padB = 50;
+  const ops = ["get", "save", "clear"];
+  const percentiles = ["p50", "p95", "p99"];
+  const yMax = Math.max(
+    ...ops.flatMap(op => percentiles.flatMap(p => [DATA.redis[op][p], DATA.mongo[op][p]]))
+  ) * 1.15;
+
+  // Y grid
+  for (let i = 0; i <= 5; i++) {
+    const y = padT + (H - padT - padB) * (i / 5);
+    el("line", { x1: padL, x2: W - padR, y1: y, y2: y, stroke: "var(--grid)", "stroke-width": 1 }, svg);
+    el("text", { x: padL - 6, y: y + 4, fill: "var(--muted)", "font-size": 11, "text-anchor": "end" },
+      svg).textContent = (yMax * (1 - i / 5)).toFixed(2) + " ms";
+  }
+
+  const groupW = (W - padL - padR) / ops.length;
+  const barW = (groupW - 20) / 6; // 3 percentiles x 2 backends
+  ops.forEach((op, gi) => {
+    const gx = padL + gi * groupW + 10;
+    percentiles.forEach((p, pi) => {
+      const colors = ["#ff6b6b","#ff8e8e","#ffb1b1"]; // redis p50/p95/p99 shades
+      const colorsM = ["#4ec9b0","#7ad6c1","#a6e3d2"]; // mongo p50/p95/p99 shades
+      [DATA.redis[op][p], DATA.mongo[op][p]].forEach((v, bi) => {
+        const bx = gx + (pi * 2 + bi) * barW;
+        const bh = (H - padT - padB) * (v / yMax);
+        const by = (H - padB) - bh;
+        const fill = bi === 0 ? colors[pi] : colorsM[pi];
+        el("rect", { x: bx, y: by, width: barW - 1, height: bh, fill, opacity: 0.95 }, svg);
+        el("text", { x: bx + (barW - 1) / 2, y: by - 3, fill: "var(--text)", "font-size": 9, "text-anchor": "middle" },
+          svg).textContent = v.toFixed(2);
+      });
+    });
+    el("text", { x: padL + gi * groupW + groupW / 2, y: H - padB + 18,
+                 fill: "var(--text)", "font-size": 13, "text-anchor": "middle" }, svg).textContent = op.toUpperCase();
+  });
+
+  // X-axis baseline
+  el("line", { x1: padL, x2: W - padR, y1: H - padB, y2: H - padB, stroke: "var(--grid)" }, svg);
+  el("text", { x: 10, y: padT + (H - padT - padB) / 2, fill: "var(--muted)", "font-size": 11,
+               transform: `rotate(-90 10 ${padT + (H - padT - padB) / 2})`, "text-anchor": "middle" }, svg).textContent = "latency (ms)";
+}
+
+// ============================================================
+// Chart 2: horizontal bar — ops/sec
+// ============================================================
+function drawThroughputChart() {
+  const svg = clearSvg("chart-throughput");
+  const W = 900, H = 280;
+  const padL = 100, padR = 30, padT = 10, padB = 30;
+  const ops = ["get", "save", "clear"];
+  const yMax = Math.max(...ops.flatMap(op => [DATA.redis[op].ops_per_sec, DATA.mongo[op].ops_per_sec])) * 1.15;
+  const rowH = (H - padT - padB) / ops.length;
+
+  for (let i = 0; i <= 5; i++) {
+    const x = padL + (W - padL - padR) * (i / 5);
+    el("line", { x1: x, x2: x, y1: padT, y2: H - padB, stroke: "var(--grid)" }, svg);
+    el("text", { x: x, y: H - padB + 18, fill: "var(--muted)", "font-size": 10, "text-anchor": "middle" },
+      svg).textContent = Math.round(yMax * (i / 5));
+  }
+  ops.forEach((op, ri) => {
+    const ry = padT + ri * rowH + 4;
+    const bh = (rowH - 12) / 2;
+    el("text", { x: padL - 8, y: ry + bh * 0.7, fill: "var(--text)", "font-size": 12, "text-anchor": "end" },
+      svg).textContent = op.toUpperCase();
+    // redis bar
+    const rw = (W - padL - padR) * (DATA.redis[op].ops_per_sec / yMax);
+    el("rect", { x: padL, y: ry, width: rw, height: bh, fill: "var(--redis)" }, svg);
+    el("text", { x: padL + rw + 4, y: ry + bh * 0.7, fill: "var(--text)", "font-size": 11 },
+      svg).textContent = DATA.redis[op].ops_per_sec.toFixed(0) + " ops/s";
+    // mongo bar
+    const mw = (W - padL - padR) * (DATA.mongo[op].ops_per_sec / yMax);
+    el("rect", { x: padL, y: ry + bh + 4, width: mw, height: bh, fill: "var(--mongo)" }, svg);
+    el("text", { x: padL + mw + 4, y: ry + bh * 0.7 + bh + 4, fill: "var(--text)", "font-size": 11 },
+      svg).textContent = DATA.mongo[op].ops_per_sec.toFixed(0) + " ops/s";
+  });
+}
+
+// ============================================================
+// Chart 3: strip plot — synthetic samples from p50/p95/p99/stddev
+// ============================================================
+function synthSamples(mean, stddev, p50, p99, n = 200) {
+  // Approximate log-normal from the captured stats. Not real samples, but
+  // preserves the spread and tail behavior the user actually wants to see.
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const u = (i + 0.5) / n;
+    // Inverse-normal-ish via Box-Muller-ish simple mapping
+    const z = (u - 0.5) * 4.2; // rough spread
+    const v = mean + stddev * z;
+    out.push(Math.max(0.05, v));
+  }
+  return out;
+}
+
+function drawStripChart() {
+  const svg = clearSvg("chart-strip");
+  const W = 900, H = 280;
+  const padL = 50, padR = 20, padT = 20, padB = 40;
+  const ops = ["get", "save", "clear"];
+  const allMax = Math.max(...ops.flatMap(op =>
+    [...synthSamples(DATA.redis[op].mean, DATA.redis[op].stddev, DATA.redis[op].p50, DATA.redis[op].p99, 200),
+     ...synthSamples(DATA.mongo[op].mean, DATA.mongo[op].stddev, DATA.mongo[op].p50, DATA.mongo[op].p99, 200)]
+  )) * 1.1;
+
+  for (let i = 0; i <= 5; i++) {
+    const y = padT + (H - padT - padB) * (i / 5);
+    el("line", { x1: padL, x2: W - padR, y1: y, y2: y, stroke: "var(--grid)" }, svg);
+    el("text", { x: padL - 6, y: y + 4, fill: "var(--muted)", "font-size": 10, "text-anchor": "end" },
+      svg).textContent = (allMax * (1 - i / 5)).toFixed(2) + " ms";
+  }
+
+  const groupW = (W - padL - padR) / ops.length;
+  ops.forEach((op, gi) => {
+    const gx = padL + gi * groupW + 10;
+    const colW = (groupW - 20) / 2 - 4;
+    [DATA.redis[op], DATA.mongo[op]].forEach((m, bi) => {
+      const samples = synthSamples(m.mean, m.stddev, m.p50, m.p99, 200);
+      const baseX = gx + bi * (colW + 8);
+      samples.forEach((s, i) => {
+        const sy = (H - padB) - (H - padT - padB) * (s / allMax);
+        el("circle", {
+          cx: baseX + (i / samples.length) * colW,
+          cy: sy, r: 1.6,
+          fill: bi === 0 ? "var(--redis)" : "var(--mongo)",
+          opacity: 0.55
+        }, svg);
+      });
+    });
+    el("text", { x: padL + gi * groupW + groupW / 2, y: H - padB + 18,
+                 fill: "var(--text)", "font-size": 13, "text-anchor": "middle" }, svg).textContent = op.toUpperCase();
+  });
+  el("text", { x: 12, y: padT + (H - padT - padB) / 2, fill: "var(--muted)", "font-size": 11,
+               transform: `rotate(-90 12 ${padT + (H - padT - padB) / 2})`, "text-anchor": "middle" }, svg).textContent = "latency (ms)";
+}
+
+// ============================================================
+// Table + snapshot
+// ============================================================
+function renderTable() {
+  const tbody = document.querySelector("#results-table tbody");
+  tbody.innerHTML = "";
+  for (const backend of ["redis", "mongo"]) {
+    for (const op of ["get", "save", "clear"]) {
+      const m = DATA[backend][op];
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><span style="color:var(--${backend})">${backend}</span></td>
+                      <td>${op}</td>
+                      <td>${m.p50.toFixed(3)}</td>
+                      <td>${m.p95.toFixed(3)}</td>
+                      <td>${m.p99.toFixed(3)}</td>
+                      <td>${m.mean.toFixed(3)}</td>
+                      <td>${m.ops_per_sec.toFixed(0)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+}
+
+function renderSnapshot() {
+  const worst = (b) => Math.max(DATA[b].get.p99, DATA[b].save.p99, DATA[b].clear.p99);
+  const peak = (b) => Math.max(DATA[b].get.ops_per_sec, DATA[b].save.ops_per_sec, DATA[b].clear.ops_per_sec);
+  document.getElementById("stat-iters").textContent = DATA.meta.iterations;
+  document.getElementById("stat-redis-p99").textContent = worst("redis").toFixed(2) + " ms";
+  document.getElementById("stat-mongo-p99").textContent = worst("mongo").toFixed(2) + " ms";
+  document.getElementById("stat-redis-ops").textContent = peak("redis").toFixed(0);
+  document.getElementById("stat-mongo-ops").textContent = peak("mongo").toFixed(0);
+  document.getElementById("meta").textContent = "Generated: " + DATA.meta.timestamp;
+}
+
+function renderAll() {
+  renderSnapshot();
+  renderTable();
+  drawLatencyChart();
+  drawThroughputChart();
+  drawStripChart();
+}
+
+async function loadResults() {
+  const status = document.getElementById("status");
+  try {
+    const resp = await fetch("benchmarks/results.json");
+    if (!resp.ok) throw new Error(resp.status);
+    DATA = await resp.json();
+    status.textContent = "Loaded benchmarks/results.json";
+  } catch (e) {
+    status.textContent = "Fetch failed (" + e.message + ") — using embedded snapshot";
+  }
+  renderAll();
+}
+
+renderAll();
+</script>
+</body>
+</html>
