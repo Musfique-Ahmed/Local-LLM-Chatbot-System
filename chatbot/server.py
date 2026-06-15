@@ -7,7 +7,11 @@ import os
 import time
 from logging.handlers import RotatingFileHandler
 
-from chatbot import config, llm, redis_store
+from chatbot import config, llm
+from chatbot.store import make_store
+
+# Single Store instance for the lifetime of the process; selected by STORE_BACKEND.
+_history = make_store()
 
 log = logging.getLogger("chatbot.server")
 
@@ -86,12 +90,12 @@ async def handle_client(
         )
 
         if message == "__clear__":
-            redis_store.clear_history(user_id)
+            _history.clear_history(user_id)
             await _send(writer, {"response": "History cleared."})
             log.info("cleared history for user_id=%s", user_id)
             return
 
-        history = redis_store.get_history(user_id)
+        history = _history.get_history(user_id)
 
         try:
             prompt = llm.build_prompt(history, message)
@@ -103,7 +107,7 @@ async def handle_client(
 
         history.append({"role": "user", "content": message})
         history.append({"role": "assistant", "content": response})
-        redis_store.save_history(user_id, history)
+        _history.save_history(user_id, history)
 
         await _send(writer, {"response": response})
 
@@ -126,7 +130,7 @@ async def main() -> None:
     """Start the TCP server and run forever."""
     _configure_logging()
     server = await asyncio.start_server(handle_client, config.HOST, config.PORT)
-    log.info("Chatbot server listening on %s:%d", config.HOST, config.PORT)
+    log.info("Chatbot server listening on %s:%d (backend=%s)", config.HOST, config.PORT, config.STORE_BACKEND)
     async with server:
         await server.serve_forever()
 

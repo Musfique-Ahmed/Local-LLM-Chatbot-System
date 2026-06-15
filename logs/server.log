@@ -1,0 +1,43 @@
+2026-06-15 13:35:11,667 INFO chatbot.server Chatbot server listening on 127.0.0.1:9000
+2026-06-15 13:35:27,436 INFO chatbot.server recv user_id=alice msg_len=66 from ('127.0.0.1', 60184)
+2026-06-15 13:35:38,174 INFO chatbot.server done user_id=alice msg_len=66 resp_len=41 latency_ms=10738.3
+2026-06-15 13:35:38,175 INFO chatbot.server recv user_id=alice msg_len=56 from ('127.0.0.1', 60219)
+2026-06-15 13:35:40,601 INFO chatbot.server done user_id=alice msg_len=56 resp_len=28 latency_ms=2426.9
+2026-06-15 13:35:40,602 INFO chatbot.server recv user_id=alice msg_len=9 from ('127.0.0.1', 60222)
+2026-06-15 13:35:40,603 INFO chatbot.server cleared history for user_id=alice
+2026-06-15 13:35:40,604 INFO chatbot.server recv user_id=alice msg_len=26 from ('127.0.0.1', 60223)
+2026-06-15 13:35:55,356 INFO chatbot.server done user_id=alice msg_len=26 resp_len=184 latency_ms=14752.4
+2026-06-15 13:36:03,127 INFO chatbot.server recv user_id=alice msg_len=66 from ('127.0.0.1', 50531)
+2026-06-15 13:36:05,661 INFO chatbot.server done user_id=alice msg_len=66 resp_len=19 latency_ms=2533.7
+2026-06-15 13:37:47,219 INFO chatbot.server recv user_id=alice msg_len=2 from ('127.0.0.1', 49191)
+2026-06-15 13:37:49,663 INFO chatbot.server done user_id=alice msg_len=2 resp_len=11 latency_ms=2443.7
+2026-06-15 13:38:08,275 INFO chatbot.server recv user_id=alice msg_len=66 from ('127.0.0.1', 49195)
+2026-06-15 13:38:10,753 INFO chatbot.server done user_id=alice msg_len=66 resp_len=19 latency_ms=2478.8
+2026-06-15 13:38:14,948 INFO chatbot.server recv user_id=alice msg_len=66 from ('127.0.0.1', 49198)
+2026-06-15 13:38:17,458 INFO chatbot.server done user_id=alice msg_len=66 resp_len=19 latency_ms=2509.7
+2026-06-15 13:38:27,457 INFO chatbot.server recv user_id=alice msg_len=66 from ('127.0.0.1', 58632)
+2026-06-15 13:38:29,865 INFO chatbot.server done user_id=alice msg_len=66 resp_len=19 latency_ms=2407.7
+2026-06-15 13:38:29,866 INFO chatbot.server recv user_id=alice msg_len=56 from ('127.0.0.1', 58635)
+2026-06-15 13:38:32,253 INFO chatbot.server done user_id=alice msg_len=56 resp_len=30 latency_ms=2387.3
+2026-06-15 13:38:32,254 INFO chatbot.server recv user_id=alice msg_len=9 from ('127.0.0.1', 58638)
+2026-06-15 13:38:32,255 INFO chatbot.server cleared history for user_id=alice
+2026-06-15 13:38:32,256 INFO chatbot.server recv user_id=alice msg_len=26 from ('127.0.0.1', 58639)
+2026-06-15 13:38:37,119 INFO chatbot.server done user_id=alice msg_len=26 resp_len=177 latency_ms=4863.6
+2026-06-15 22:10:02,887 INFO chatbot.server Chatbot server listening on 127.0.0.1:9000 (backend=redis)
+2026-06-15 22:10:14,352 INFO chatbot.server recv user_id=alice msg_len=66 from ('127.0.0.1', 62047)
+2026-06-15 22:10:21,802 INFO chatbot.server done user_id=alice msg_len=66 resp_len=19 latency_ms=7450.0
+2026-06-15 22:10:21,803 INFO chatbot.server recv user_id=alice msg_len=56 from ('127.0.0.1', 62093)
+2026-06-15 22:10:24,168 INFO chatbot.server done user_id=alice msg_len=56 resp_len=30 latency_ms=2364.8
+2026-06-15 22:10:24,169 INFO chatbot.server recv user_id=alice msg_len=9 from ('127.0.0.1', 62096)
+2026-06-15 22:10:24,171 INFO chatbot.server cleared history for user_id=alice
+2026-06-15 22:10:24,172 INFO chatbot.server recv user_id=alice msg_len=26 from ('127.0.0.1', 62097)
+2026-06-15 22:10:27,067 INFO chatbot.server done user_id=alice msg_len=26 resp_len=188 latency_ms=2895.6
+2026-06-15 22:18:59,461 INFO chatbot.server Chatbot server listening on 127.0.0.1:9000 (backend=mongo)
+2026-06-15 22:19:21,760 INFO chatbot.server recv user_id=alice_mongo msg_len=66 from ('127.0.0.1', 62042)
+2026-06-15 22:19:27,964 INFO chatbot.server done user_id=alice_mongo msg_len=66 resp_len=41 latency_ms=6204.4
+2026-06-15 22:19:27,965 INFO chatbot.server recv user_id=alice_mongo msg_len=56 from ('127.0.0.1', 59697)
+2026-06-15 22:19:30,373 INFO chatbot.server done user_id=alice_mongo msg_len=56 resp_len=28 latency_ms=2408.0
+2026-06-15 22:19:30,374 INFO chatbot.server recv user_id=alice_mongo msg_len=9 from ('127.0.0.1', 59706)
+2026-06-15 22:19:30,375 INFO chatbot.server cleared history for user_id=alice_mongo
+2026-06-15 22:19:30,376 INFO chatbot.server recv user_id=alice_mongo msg_len=26 from ('127.0.0.1', 59707)
+2026-06-15 22:19:33,312 INFO chatbot.server done user_id=alice_mongo msg_len=26 resp_len=183 latency_ms=2936.6

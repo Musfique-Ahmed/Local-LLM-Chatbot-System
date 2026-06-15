@@ -20,20 +20,37 @@ def _key(user_id: str) -> str:
     return f"chat:{user_id}"
 
 
+class RedisStore:
+    """Redis-backed implementation of the Store protocol."""
+
+    def get_history(self, user_id: str) -> list[dict]:
+        """Return the conversation history list for a user, or [] if none."""
+        raw = client.get(_key(user_id))
+        if raw is None:
+            return []
+        return json.loads(raw)
+
+    def save_history(self, user_id: str, history: list[dict]) -> None:
+        """Persist the history, trimmed to the last MAX_MESSAGES entries."""
+        trimmed = history[-config.MAX_MESSAGES:]
+        client.set(_key(user_id), json.dumps(trimmed))
+
+    def clear_history(self, user_id: str) -> None:
+        """Delete the history key for a user."""
+        client.delete(_key(user_id))
+
+
+# Backwards-compatible module-level functions (used by older code paths/tests).
 def get_history(user_id: str) -> list[dict]:
     """Return the conversation history list for a user, or [] if none."""
-    raw = client.get(_key(user_id))
-    if raw is None:
-        return []
-    return json.loads(raw)
+    return RedisStore().get_history(user_id)
 
 
 def save_history(user_id: str, history: list[dict]) -> None:
     """Persist the history, trimmed to the last MAX_MESSAGES entries."""
-    trimmed = history[-config.MAX_MESSAGES:]
-    client.set(_key(user_id), json.dumps(trimmed))
+    RedisStore().save_history(user_id, history)
 
 
 def clear_history(user_id: str) -> None:
     """Delete the history key for a user."""
-    client.delete(_key(user_id))
+    RedisStore().clear_history(user_id)
