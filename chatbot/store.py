@@ -26,6 +26,27 @@ def make_store() -> Store:
         from chatbot.mongo_store import MongoStore
 
         return MongoStore()
+    if backend == "memory":
+        from chatbot.memory_store import MemoryStore
+
+        return MemoryStore()
     raise ValueError(
-        f"Unknown STORE_BACKEND={config.STORE_BACKEND!r} (expected 'redis' or 'mongo')"
+        f"Unknown STORE_BACKEND={config.STORE_BACKEND!r} "
+        "(expected 'redis', 'mongo', or 'memory')"
     )
+
+
+def probe_store() -> tuple[bool, str]:
+    """Try to construct a store and perform a no-op call.
+
+    Returns ``(ok, message)``. Used at CLI startup so we can warn
+    clearly when the configured backend is unavailable, instead of
+    crashing on the first user message.
+    """
+    try:
+        store = make_store()
+        store.get_history("__probe__")
+    except Exception as exc:  # noqa: BLE001 — any backend error is a probe failure
+        return False, f"{type(exc).__name__}: {exc}"
+    return True, "ok"
+

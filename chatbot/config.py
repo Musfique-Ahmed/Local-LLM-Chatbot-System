@@ -21,7 +21,11 @@ MONGO_DB = "chatbot"
 MONGO_COLLECTION = "history"
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "gemma3:4b"
+# Default model. Override at runtime in the TUI with `/model <name>`,
+# or at startup by exporting MODEL_NAME before launching Python
+# (e.g. `$env:MODEL_NAME="qwen3:8b"` on PowerShell, then `python -m chatbot.cli`).
+# MODEL_NAME = os.environ.get("MODEL_NAME", "gemma3:4b")
+MODEL_NAME = os.environ.get("MODEL_NAME", "qwen3:8b")
 
 MAX_MESSAGES = 20
 SYSTEM_PROMPT = "You are a helpful assistant."
